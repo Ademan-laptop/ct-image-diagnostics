@@ -7,8 +7,8 @@
 #include "itkRescaleIntensityImageFilter.h"
 #include "QuickView.h"
 
-template <typename TInputImage, typename TOutputImage = itk::Image<typename TInputImage::PixelType, TInputImage::ImageDimension> >
-typename TOutputImage::Pointer extract2DImageSlice(typename TInputImage::Pointer input, int plane, int slice) {
+template <typename TInputImage, typename TOutputImage = itk::Image<typename TInputImage::PixelType, 2> >
+typename TOutputImage::Pointer extract2DImageSlice(typename TInputImage::ConstPointer input, int plane, int slice) {
 	typedef itk::ExtractImageFilter < TInputImage, TOutputImage > FilterType;
 	typename FilterType::Pointer filter = FilterType::New();
 
@@ -50,7 +50,7 @@ void addImage(TViewer & viewer, typename TImage::Pointer image) {
 }
 
 template <typename TImage>
-void displaySlice(typename TImage::Pointer image, int plane, int sliceIndex ) {
+void displaySlice(typename TImage::ConstPointer image, int plane, int sliceIndex ) {
 	typedef itk::Image<typename TImage::PixelType, 2> SliceType;
 	typename SliceType::Pointer slice = extract2DImageSlice<TImage, SliceType>(image, plane, sliceIndex);
 

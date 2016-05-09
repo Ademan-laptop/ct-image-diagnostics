@@ -54,6 +54,7 @@ public:
             MeasurementType delta = next_threshold - threshold;
 
             threshold = next_threshold;
+            std::cout << "Threshold: " << threshold << std::endl;
 
             if ((-max_error) <= delta && delta <= max_error) {
                 converged = true;
@@ -76,8 +77,10 @@ public:
         MeasurementType background = itk::NumericTraits<MeasurementType>::ZeroValue(); 
         FrequencyType nbackground = itk::NumericTraits<FrequencyType>::ZeroValue();
 
+	    ++iter; // FIXME: skipping first histogram element (millions of -3022.98 values)
         while (iter != end) {
             MeasurementType value = iter.GetMeasurementVector()[0];
+            std::cout << iter.GetMeasurementVector().size() << ": " << value << " " << iter.GetFrequency() << std::endl;
 
             if (value <= threshold) {
                 background += value * iter.GetFrequency();
@@ -99,7 +102,7 @@ protected:
     OptimalThresholdCalculator(/*MeasurementType initial_threshold*/) {
 	// FIXME: hardcoded
         //threshold = initial_threshold;
-        threshold = 1000;
+        threshold = -1000;
         max_error = static_cast<MeasurementType>(2);
         max_iterations = itk::NumericTraits<SizeValueType>::max() - 1;
     }
