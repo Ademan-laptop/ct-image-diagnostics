@@ -83,10 +83,10 @@ public:
         size[0] = 2000; // FIXME: should be more flexible
         filter->SetInput(image);
         //filter->SetAutoMinimumMaximum(true);
-  typename HistogramFilterType::HistogramMeasurementVectorType lowerBound(1);
-  typename HistogramFilterType::HistogramMeasurementVectorType upperBound(1);
-  lowerBound[0] = -1500;
-  upperBound[0] = 1500;
+        typename HistogramFilterType::HistogramMeasurementVectorType lowerBound(1);
+        typename HistogramFilterType::HistogramMeasurementVectorType upperBound(1);
+        lowerBound[0] = -1500;
+        upperBound[0] = 1500;
 
         filter->SetHistogramBinMinimum(lowerBound);
         filter->SetHistogramBinMaximum(upperBound);
@@ -98,6 +98,23 @@ public:
         return filter->GetOutput();
     }
 
+    /*HistogramPointer getHistogram(itk::Image<unsigned char, 2>::Pointer image) {
+	typedef itk::Statistics::ImageToHistogramFilter<itk::Image<unsigned char, 2> > HistogramFilterType;
+        typename HistogramFilterType::Pointer filter = HistogramFilterType::New();
+
+        HistogramSizeType size(1);
+        //size[0] = 4096; // FIXME: should be more flexible
+        size[0] = 2000; // FIXME: should be more flexible
+        filter->SetInput(image);
+        filter->SetAutoMinimumMaximum(true);
+        filter->SetHistogramSize(size);
+
+        filter->SetMarginalScale(1); // FIXME: parameter
+        filter->Update();
+
+        return filter->GetOutput();
+    }*/
+
     typedef OptimalThresholdCalculator<HistogramType> ThresholdCalculatorType;
     /**
      * Segment air from flesh using an optimal threshold algorithm
@@ -105,13 +122,13 @@ public:
     AirFleshSegmentedImagePointer segmentAirFromFlesh(ConstInputImagePointer image) {
         HistogramPointer histogram = getHistogram(image);
 
-	typename ThresholdCalculatorType::Pointer thresholdCalculator = ThresholdCalculatorType::New();
+        typename ThresholdCalculatorType::Pointer thresholdCalculator = ThresholdCalculatorType::New();
         thresholdCalculator->SetInputHistogram(histogram);
         thresholdCalculator->Compute();
 
         HistogramMeasurementType threshold = thresholdCalculator->GetThreshold();
 
-	AirFleshSegmentedImagePointer flesh = AirFleshSegmentedImage::New();
+        AirFleshSegmentedImagePointer flesh = AirFleshSegmentedImage::New();
         flesh->SetInput(image);
         flesh->SetLowerThreshold(threshold);
 
@@ -130,10 +147,10 @@ public:
     TorsoSegmentedImagePointer segmentTorso(AirFleshSegmentedImagePointer flesh) {
         TorsoSegmentedImagePointer slices = TorsoSegmentedImage::New();
 
-	// Update flesh before using it
-	flesh->Update();
+        // Update flesh before using it
+        flesh->Update();
 
-	typename HoleFillingFilter::Pointer filter = HoleFillingFilter::New();
+        typename HoleFillingFilter::Pointer filter = HoleFillingFilter::New();
         slices->SetFilter(filter);
         slices->SetInput(flesh->GetOutput());
 
@@ -151,9 +168,9 @@ public:
     InitialLungsSegmentedImagePointer segmentLungsInitial(AirFleshSegmentedImagePointer air, TorsoSegmentedImagePointer torso) {
         InitialLungsSegmentedImagePointer initialLungs = InitialLungsSegmentedImage::New();
 
-	//Update air and torso before use
-	air->Update();
-	torso->Update();
+        //Update air and torso before use
+        air->Update();
+        torso->Update();
 
         initialLungs->SetInput1(air->GetOutput());
         initialLungs->SetInput2(torso->GetOutput());
@@ -161,7 +178,7 @@ public:
         return initialLungs;
     }
 
-    typedef itk::SliceBySliceImageFilter<typename InitialLungsSegmentedImage::OutputImageType, SegmentedImage, HoleFillingFilter> FinalLungsSegmentedImage;
+    typedef itk::SliceBySliceImageFilter<SegmentedImage, SegmentedImage, HoleFillingFilter> FinalLungsSegmentedImage;
     typedef typename FinalLungsSegmentedImage::Pointer FinalLungsSegmentedImagePointer;
 
     /**
@@ -170,10 +187,10 @@ public:
     FinalLungsSegmentedImagePointer segmentLungsFinal(InitialLungsSegmentedImagePointer initialLungs) {
         FinalLungsSegmentedImagePointer lungs = FinalLungsSegmentedImage::New();
 
-	// Update initial lungs before use
-	initialLungs->Update();
+        // Update initial lungs before use
+        initialLungs->Update();
 
-	typename HoleFillingFilter::Pointer filter = HoleFillingFilter::New();
+        typename HoleFillingFilter::Pointer filter = HoleFillingFilter::New();
         lungs->SetFilter(filter);
         lungs->SetInput(initialLungs->GetOutput());
 
@@ -184,33 +201,56 @@ public:
         ConstInputImagePointer image = this->GetInput();
 
         QuickView viewer;
-	addImage<QuickView, SegmentedSliceImage>(viewer, extract2DImageSlice<typename ConstInputImagePointer::ObjectType>(image, 2, 63));
+        //addImage<QuickView, itk::Image<signed short, 2> >(viewer, extract2DImageSlice<typename ConstInputImagePointer::ObjectType>(image, 2, 63));
 
         // p.16
         // Segment flesh, this mask is true where there is flesh (!M_i in paper)
-	AirFleshSegmentedImagePointer flesh = segmentAirFromFlesh(image);
+        AirFleshSegmentedImagePointer flesh = segmentAirFromFlesh(image);
 
         flesh->Update();
-	//displaySlice<typename AirFleshSegmentedImage::OutputImageType>(flesh->GetOutput(), 2, 63);
-	addImage<QuickView, SegmentedSliceImage>(viewer, extract2DImageSlice<typename AirFleshSegmentedImage::OutputImageType>(flesh->GetOutput(), 2, 63));
+        //displaySlice<typename AirFleshSegmentedImage::OutputImageType>(flesh->GetOutput(), 2, 63);
+        //addImage<QuickView, SegmentedSliceImage>(viewer, extract2DImageSlice<typename AirFleshSegmentedImage::OutputImageType>(flesh->GetOutput(), 2, 63));
         // p.16
         // Fill holes in the flesh mask to obtain the torso mask
         // body mask in paper (M_b)
         TorsoSegmentedImagePointer torso = segmentTorso(flesh);
 
         torso->Update();
-	addImage<QuickView, SegmentedSliceImage>(viewer, extract2DImageSlice<typename TorsoSegmentedImage::OutputImageType>(torso->GetOutput(), 2, 63));
+        //addImage<QuickView, SegmentedSliceImage>(viewer, extract2DImageSlice<typename TorsoSegmentedImage::OutputImageType>(torso->GetOutput(), 2, 63));
         // Get the intersection between the torso and the air masks to obtain initial lung mask
         // Called secondary lung mask in paper (M_s)
         InitialLungsSegmentedImagePointer initialLungs = segmentLungsInitial(flesh, torso);
         initialLungs->Update();
-	addImage<QuickView, SegmentedSliceImage>(viewer, extract2DImageSlice<typename InitialLungsSegmentedImage::OutputImageType>(initialLungs->GetOutput(), 2, 63));
+        //addImage<QuickView, SegmentedSliceImage>(viewer, extract2DImageSlice<typename InitialLungsSegmentedImage::OutputImageType>(initialLungs->GetOutput(), 2, 63));
+
+        //HistogramPointer initialLungsHistogram = getHistogram(initialLungs->GetOutput());
+
+        //typename HistogramType::ConstIterator iter = initialLungsHistogram->Begin();
+        //typename HistogramType::ConstIterator end = initialLungsHistogram->End();
+
+        //while (iter != end) {
+            //std::cout << iter.GetMeasurementVector()[0] << ": " << iter.GetFrequency() << std::endl;
+            //++iter;
+        //}
 
         // Fill holes in the initial lung mask to obtain the final lung mask
         FinalLungsSegmentedImagePointer lungs = segmentLungsFinal(initialLungs);
-	lungs->Update();
-	addImage<QuickView, SegmentedSliceImage>(viewer, extract2DImageSlice<typename FinalLungsSegmentedImage::OutputImageType>(lungs->GetInput(), 2, 63));
-	addImage<QuickView, SegmentedSliceImage>(viewer, extract2DImageSlice<typename InitialLungsSegmentedImage::OutputImageType>(initialLungs->GetInput(), 2, 63));
+        lungs->Update();
+        //addImage<QuickView, SegmentedSliceImage>(viewer, extract2DImageSlice<typename InitialLungsSegmentedImage::OutputImageType>(initialLungs->GetOutput(), 2, 63));
+        // no tpe named 'OutputImagetype' in 'SegmentedLungfilter<...>' clue for other termplate errors?
+        //addImage<QuickView, SegmentedSliceImage>(viewer, extract2DImageSlice<typename FinalLungsSegmentedImage::OutputImageType>(lungs->GetOutput(), 2, 63));
+
+        typename SegmentedSliceImage::Pointer slice = extract2DImageSlice<typename InitialLungsSegmentedImage::OutputImageType>(initialLungs->GetOutput(), 2, 63);
+
+        typename HoleFillingFilter::Pointer holefiller = HoleFillingFilter::New();
+
+        holefiller->SetInput(slice);
+        holefiller->SetForegroundValue((unsigned char)255);
+        holefiller->Update();
+
+        addImage<QuickView, SegmentedSliceImage>(viewer, slice);
+        addImage<QuickView, SegmentedSliceImage>(viewer, holefiller->GetOutput());
+	
         viewer.Visualize();
 	this->GraftOutput(lungs->GetOutput());
     }
